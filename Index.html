@@ -1,0 +1,309 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Дневник оценок</title>
+<script src="https://telegram.org/js/telegram-web-app.js"></script>
+<style>
+:root{
+  --tx:#0a0a0a;
+  --hint:#66666e;
+  --glass:rgba(255,255,255,.5);
+  --glass-b:rgba(255,255,255,.95);
+  --shadow:rgba(0,0,0,.2);
+  --h1-shadow:0 2px 12px rgba(255,255,255,.8);
+  --bubble:radial-gradient(circle at 30% 24%,#fff,rgba(255,255,255,.6) 35%,rgba(140,140,150,.55) 100%);
+  --bubble-in:inset -4px -6px 12px rgba(0,0,0,.18),inset 4px 4px 10px rgba(255,255,255,.9);
+  --bg-bubble:radial-gradient(circle at 30% 28%,rgba(255,255,255,.95),rgba(255,255,255,.3) 35%,rgba(0,0,0,.06) 75%,rgba(255,255,255,.5) 100%);
+  --btn:radial-gradient(circle at 30% 20%,rgba(255,255,255,.4),rgba(255,255,255,0) 40%),linear-gradient(135deg,#444,#000);
+  --btn-tx:#fff;
+  --btn-in:inset -3px -4px 10px rgba(0,0,0,.5),inset 3px 3px 8px rgba(255,255,255,.25);
+  --page:linear-gradient(160deg,#ffffff 0%,#e8e8ec 50%,#cfcfd4 100%);
+  --page-solid:#ececef;
+}
+@media (prefers-color-scheme:dark){
+  :root{
+    --tx:#f5f5f5;
+    --hint:#a0a0a8;
+    --glass:rgba(255,255,255,.08);
+    --glass-b:rgba(255,255,255,.2);
+    --shadow:rgba(0,0,0,.7);
+    --h1-shadow:none;
+    --bubble:radial-gradient(circle at 30% 24%,rgba(255,255,255,.75),rgba(255,255,255,.18) 35%,rgba(255,255,255,.06) 100%);
+    --bubble-in:inset -4px -6px 12px rgba(0,0,0,.5),inset 4px 4px 10px rgba(255,255,255,.35);
+    --bg-bubble:radial-gradient(circle at 30% 28%,rgba(255,255,255,.55),rgba(255,255,255,.08) 38%,rgba(255,255,255,.03) 75%,rgba(255,255,255,.18) 100%);
+    --btn:radial-gradient(circle at 30% 20%,rgba(255,255,255,.9),rgba(255,255,255,0) 45%),linear-gradient(135deg,#fff,#b5b5b5);
+    --btn-tx:#000;
+    --btn-in:inset -3px -4px 10px rgba(0,0,0,.25),inset 3px 3px 8px rgba(255,255,255,.7);
+    --page:linear-gradient(160deg,#000000 0%,#131315 55%,#262629 100%);
+    --page-solid:#000;
+  }
+}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html{background:var(--page-solid)}
+body{
+  margin:0;min-height:100vh;color:var(--tx);
+  font-family:-apple-system,system-ui,Roboto,sans-serif;font-size:16px;
+  padding:14px 14px calc(28px + env(safe-area-inset-bottom,0px));
+  background:var(--page);background-attachment:fixed;
+}
+#app{position:relative;z-index:1}
+
+/* фоновые пузыри */
+.bubbles{position:fixed;inset:0;overflow:hidden;z-index:0;pointer-events:none}
+.bubbles i{
+  position:absolute;border-radius:50%;
+  background:var(--bg-bubble);
+  box-shadow:inset -6px -8px 18px rgba(0,0,0,.12),inset 6px 6px 14px rgba(255,255,255,.35);
+  animation:float 9s ease-in-out infinite;
+}
+.bubbles i:nth-child(1){width:130px;height:130px;left:-30px;top:8%;animation-duration:10s}
+.bubbles i:nth-child(2){width:70px;height:70px;right:12%;top:5%;animation-duration:7s;animation-delay:-2s}
+.bubbles i:nth-child(3){width:180px;height:180px;right:-60px;top:32%;animation-duration:12s;animation-delay:-4s}
+.bubbles i:nth-child(4){width:50px;height:50px;left:18%;top:46%;animation-duration:8s;animation-delay:-1s}
+.bubbles i:nth-child(5){width:110px;height:110px;left:-20px;bottom:18%;animation-duration:11s;animation-delay:-5s}
+.bubbles i:nth-child(6){width:60px;height:60px;right:22%;bottom:10%;animation-duration:9s;animation-delay:-3s}
+.bubbles i:nth-child(7){width:90px;height:90px;left:44%;bottom:-20px;animation-duration:13s;animation-delay:-6s}
+@keyframes float{
+  0%,100%{transform:translate(0,0) scale(1)}
+  50%{transform:translate(10px,-26px) scale(1.06)}
+}
+
+h1{font-size:22px;margin:4px 4px 14px;text-shadow:var(--h1-shadow)}
+.card,.row{
+  position:relative;
+  background:var(--glass);
+  -webkit-backdrop-filter:blur(18px) saturate(150%);
+  backdrop-filter:blur(18px) saturate(150%);
+  border:1px solid var(--glass-b);
+  border-radius:28px;
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.5),0 12px 30px var(--shadow);
+}
+.card{padding:16px;margin-bottom:14px}
+.card::after{
+  content:"";position:absolute;top:8px;left:18px;width:46px;height:14px;
+  border-radius:50%;background:rgba(255,255,255,.5);filter:blur(1px);transform:rotate(-8deg);pointer-events:none;
+}
+.row{display:flex;justify-content:space-between;align-items:center;padding:14px 18px;margin-bottom:10px;border-radius:999px;transition:transform .15s}
+.row:active{transform:scale(.97)}
+.row b{font-size:19px;min-width:54px;text-align:center;padding:6px 10px;border-radius:999px;background:var(--bubble);box-shadow:var(--bubble-in)}
+.big{font-size:40px;font-weight:800;letter-spacing:-1px}
+.hint{color:var(--hint);font-size:14px}
+
+button{
+  border:0;color:var(--btn-tx);font-size:15px;font-weight:600;padding:11px 18px;cursor:pointer;border-radius:999px;
+  background:var(--btn);
+  box-shadow:var(--btn-in),0 8px 18px var(--shadow);
+  transition:transform .12s;
+}
+button:active{transform:scale(.9)}
+button.ghost{background:none;box-shadow:none;color:var(--tx);padding:6px 4px;font-size:16px}
+button.sec{background:var(--glass);color:var(--tx);border:1px solid var(--glass-b);box-shadow:0 6px 14px var(--shadow)}
+
+.grid{display:grid;grid-template-columns:repeat(5,1fr);gap:10px;margin:12px 0 4px}
+.grid button{
+  aspect-ratio:1;padding:0;font-size:20px;font-weight:700;color:var(--tx);border-radius:50%;
+  background:var(--bubble);
+  box-shadow:var(--bubble-in),0 8px 16px var(--shadow);
+}
+.chips{display:flex;flex-wrap:wrap;gap:10px;margin:12px 0}
+.chip{
+  width:50px;height:50px;padding:0;font-size:18px;font-weight:700;color:var(--tx);border-radius:50%;
+  background:var(--bubble);
+  box-shadow:var(--bubble-in),0 6px 14px var(--shadow);
+}
+.chip.off{opacity:.35;text-decoration:line-through}
+.chip.del{background:var(--btn);color:var(--btn-tx);outline:2px dashed var(--tx);outline-offset:2px}
+.chip.born{animation:pop .45s cubic-bezier(.3,1.6,.5,1)}
+@keyframes pop{0%{transform:scale(.2);opacity:0}100%{transform:scale(1);opacity:1}}
+
+input{
+  width:100%;padding:13px 16px;font-size:17px;border-radius:999px;color:var(--tx);outline:none;
+  border:1px solid var(--glass-b);background:var(--glass);
+  box-shadow:inset 0 2px 6px rgba(0,0,0,.15);
+}
+input::placeholder{color:var(--hint)}
+.inline{display:flex;gap:8px;margin-top:8px}
+ul{padding-left:20px;margin:8px 0 0}
+li{margin-bottom:4px}
+@media (prefers-reduced-motion:reduce){.bubbles i,.chip.born{animation:none}}
+</style>
+</head>
+<body>
+<div class="bubbles"><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div>
+<div id="app"></div>
+<script>
+const SUBJECTS = [
+  "Белорусский язык","Белорусская литература","Русский язык","Русская литература",
+  "Математика","Английский язык","Биология","Химия","Информатика","Всемирная история",
+  "История Беларуси","Трудовое обучение","Физкультура","Физика","География","Обществоведение"
+];
+
+const tg = window.Telegram && window.Telegram.WebApp;
+if (tg) { tg.ready(); tg.expand(); }
+const cloud = (tg && tg.CloudStorage && tg.isVersionAtLeast && tg.isVersionAtLeast('6.9')) ? tg.CloudStorage : null;
+
+let state = { grades: {}, target: null };
+SUBJECTS.forEach((_, i) => state.grades[i] = []);
+let view = { name: 'home' };
+let deleteMode = false;
+
+/* ---------- хранение ---------- */
+function cloudGet(keys) {
+  return new Promise(res => cloud.getItems(keys, (e, v) => res(e ? null : v)));
+}
+async function load() {
+  let local = null;
+  try { local = JSON.parse(localStorage.getItem('grades_state')); } catch (e) {}
+  if (cloud) {
+    const keys = SUBJECTS.map((_, i) => 's' + i).concat('target');
+    const v = await cloudGet(keys);
+    if (v && Object.values(v).some(x => x)) {
+      SUBJECTS.forEach((_, i) => { try { state.grades[i] = JSON.parse(v['s' + i] || '[]'); } catch (e) {} });
+      state.target = v.target ? parseFloat(v.target) : null;
+      return;
+    }
+  }
+  if (local && local.grades) {
+    SUBJECTS.forEach((_, i) => { state.grades[i] = local.grades[i] || []; });
+    state.target = local.target ?? null;
+  }
+}
+function save(i) {
+  try { localStorage.setItem('grades_state', JSON.stringify(state)); } catch (e) {}
+  if (!cloud) return;
+  const idx = (i === undefined) ? SUBJECTS.map((_, j) => j) : [i];
+  idx.forEach(j => cloud.setItem('s' + j, JSON.stringify(state.grades[j]), () => {}));
+  if (state.target !== null) cloud.setItem('target', String(state.target), () => {});
+}
+
+/* ---------- расчёты ---------- */
+function stat(i) {
+  const list = (i === 'all') ? Object.values(state.grades).flat() : state.grades[i];
+  const used = list.filter(g => !g.x);
+  const s = used.reduce((a, g) => a + g.v, 0);
+  return { s, n: used.length };
+}
+const fmt = x => x.toFixed(2);
+const avgText = ({ s, n }) => n ? fmt(s / n) : '—';
+
+/* итоговая оценка по предмету = среднее, округлённое до целого (x.5 вверх) */
+const rnd = x => Math.floor(x + 0.5 + 1e-9);
+function finalGrade(i) { const st = stat(i); return st.n ? rnd(st.s / st.n) : null; }
+/* общий балл = среднее из итоговых (округлённых) оценок по предметам */
+function overall() {
+  let sum = 0, m = 0;
+  SUBJECTS.forEach((_, i) => { const f = finalGrade(i); if (f !== null) { sum += f; m++; } });
+  return { sum, m };
+}
+
+function needHtml(key) {
+  if (state.target === null) return '<p class="hint">Задай цель на главной странице, и здесь появится расчёт.</p>';
+  const T = state.target, { s, n } = stat(key);
+  const cur = n ? s / n : 0;
+  if (n && cur >= T) return '<p>✅ Цель ' + fmt(T) + ' уже достигнута!</p>';
+  const items = [];
+  for (let g = 10; g > T; g--) {
+    let k = Math.max(1, Math.ceil((T * n - s) / (g - T) - 1e-9));
+    if (k > 30) items.push('<li>оценки ' + g + ': больше 30 штук</li>');
+    else items.push('<li><b>' + k + ' × «' + g + '»</b> → ' + fmt((s + k * g) / (n + k)) + '</li>');
+  }
+  if (!items.length) return '<p>❌ Такую цель не достичь: нужны оценки выше цели.</p>';
+  return '<p class="hint">Цель ' + fmt(T) + '. Чтобы дойти до неё, нужно получить:</p><ul>' + items.join('') + '</ul>';
+}
+
+function needOverall() {
+  if (state.target === null) return '<p class="hint">Задай цель выше, и здесь появится расчёт.</p>';
+  const T = state.target, { sum, m } = overall();
+  if (!m) return '<p class="hint">Добавь оценки, и здесь появится расчёт.</p>';
+  if (sum / m >= T - 1e-9) return '<p>✅ Цель ' + fmt(T) + ' уже достигнута!</p>';
+  const need = Math.ceil(T * m - sum - 1e-9);
+  const opts = [];
+  SUBJECTS.forEach((name, i) => {
+    const st = stat(i);
+    if (!st.n) return;
+    const r = rnd(st.s / st.n);
+    if (r >= 10) return;
+    const th = r + 0.5;
+    const k = Math.max(1, Math.ceil((th * st.n - st.s) / (10 - th) - 1e-9));
+    opts.push({ name, k, r });
+  });
+  opts.sort((a, b) => a.k - b.k);
+  const shown = opts.slice(0, need);
+  let html = '<p class="hint">Цель ' + fmt(T) + '. Нужно поднять итоговые оценки по предметам в сумме на ' + need +
+    '. Самые лёгкие варианты (каждый даёт +1):</p>';
+  html += '<ul>' + shown.map(o => '<li><b>' + o.name + '</b>: ' + o.k + ' × «10» → итоговая ' + (o.r + 1) + '</li>').join('') + '</ul>';
+  if (need > opts.length) html += '<p class="hint">Этого может не хватить: тогда итоговые оценки придётся поднимать ещё раз.</p>';
+  return html;
+}
+
+/* ---------- отрисовка ---------- */
+function render() {
+  const app = document.getElementById('app');
+  if (view.name === 'home') {
+    const ov = overall();
+    app.innerHTML =
+      '<h1>📒 Дневник оценок</h1>' +
+      '<div class="card"><div class="hint">Общий средний балл</div><div class="big">' + (ov.m ? fmt(ov.sum / ov.m) : '—') + '</div>' +
+      '<div class="hint">считается по итоговым (округлёнными до целого) оценкам предметов</div>' +
+      '<div class="hint" style="margin-top:12px">Мой целевой средний балл (1–10)</div>' +
+      '<div class="inline"><input id="target" type="number" inputmode="decimal" step="0.1" min="1" max="10" placeholder="например 8.5" value="' + (state.target ?? '') + '">' +
+      '<button data-act="settarget">OK</button></div>' +
+      '<div style="margin-top:12px"><b>Что нужно для общего балла:</b>' + needOverall() + '</div></div>' +
+      SUBJECTS.map((name, i) => {
+        const st = stat(i);
+        return '<div class="row" data-act="open" data-i="' + i + '"><span>' + name +
+          '<div class="hint">оценок: ' + st.n + (st.n ? ' · итоговая: ' + rnd(st.s / st.n) : '') + '</div></span><b>' + avgText(st) + '</b></div>';
+      }).join('');
+  } else {
+    const i = view.i, list = state.grades[i], st = stat(i);
+    app.innerHTML =
+      '<button class="ghost" data-act="home">← Назад</button>' +
+      '<h1>' + SUBJECTS[i] + '</h1>' +
+      '<div class="card"><div class="hint">Средний балл по предмету</div><div class="big">' + avgText(st) + '</div>' +
+      '<div class="hint">Итоговая оценка (округлённая): ' + (st.n ? rnd(st.s / st.n) : '—') + '</div></div>' +
+      '<div class="card"><b>Добавить оценку</b><div class="grid">' +
+      [1,2,3,4,5,6,7,8,9,10].map(v => '<button data-act="add" data-v="' + v + '">' + v + '</button>').join('') +
+      '</div></div>' +
+      '<div class="card"><b>Мои оценки</b>' +
+      '<div class="hint">' + (deleteMode ? 'Режим удаления: нажми на оценку, чтобы удалить её.' : 'Нажми на оценку, чтобы исключить её из расчёта (зачёркнута) или вернуть.') + '</div>' +
+      '<div class="chips">' +
+      (list.length ? list.map((g, k) => '<button class="chip' + (g.x ? ' off' : '') + (deleteMode ? ' del' : '') + '" data-act="chip" data-k="' + k + '">' + g.v + '</button>').join('') : '<span class="hint">Пока пусто</span>') +
+      '</div>' +
+      (list.length ? '<button class="sec" data-act="delmode">' + (deleteMode ? 'Готово' : '🗑 Режим удаления') + '</button>' : '') +
+      '</div>' +
+      '<div class="card"><b>Что нужно получить</b>' + needHtml(i) + '</div>';
+  }
+}
+
+document.addEventListener('click', e => {
+  const el = e.target.closest('[data-act]');
+  if (!el) return;
+  const act = el.dataset.act;
+  if (act === 'open') { view = { name: 'sub', i: +el.dataset.i }; deleteMode = false; }
+  else if (act === 'home') { view = { name: 'home' }; }
+  else if (act === 'add') {
+    state.grades[view.i].push({ v: +el.dataset.v, x: false }); save(view.i);
+    if (tg && tg.HapticFeedback) tg.HapticFeedback.impactOccurred('light');
+  }
+  else if (act === 'chip') {
+    const k = +el.dataset.k;
+    if (deleteMode) state.grades[view.i].splice(k, 1);
+    else state.grades[view.i][k].x = !state.grades[view.i][k].x;
+    save(view.i);
+  }
+  else if (act === 'delmode') { deleteMode = !deleteMode; }
+  else if (act === 'settarget') {
+    const v = parseFloat(document.getElementById('target').value.replace(',', '.'));
+    if (!(v >= 1 && v <= 10)) { alert('Введи число от 1 до 10'); return; }
+    state.target = v; save();
+  }
+  render();
+  if (act === 'add') { const c = document.querySelector('.chips .chip:last-child'); if (c) c.classList.add('born'); }
+});
+
+load().then(render);
+</script>
+</body>
+</html>
